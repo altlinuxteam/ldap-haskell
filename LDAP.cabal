@@ -1,7 +1,7 @@
 cabal-version: >=1.8
 
 Name: LDAP
-Version: 0.6.11
+Version: 0.6.12
 License: BSD3
 Maintainer: Edward Z. Yang <ezyang@mit.edu>
 Author: John Goerzen, Edward Z. Yang

@@ -24,7 +24,8 @@ module LDAP.Init(ldapOpen,
                  ldapInit,
                  ldapInitialize,
                  ldapSimpleBind,
-                 ldapExternalSaslBind)
+                 ldapExternalSaslBind,
+                 ldapGSSAPISaslBind)
 where
 
 import Foreign.Ptr
@@ -50,7 +51,7 @@ ldapSetRestart cld =
     with ((#{const LDAP_OPT_ON})::LDAPInt) $ \copt ->
     ldap_set_option cld #{const LDAP_OPT_RESTART} (castPtr copt)
 
-{- | Preferred way to initialize a LDAP connection. 
+{- | Preferred way to initialize a LDAP connection.
 The default port is given in 'LDAP.Constants.ldapPort'.
 
 Could throw IOError on failure. -}
@@ -101,7 +102,7 @@ ldapSimpleBind :: LDAP          -- ^ LDAP Object
 ldapSimpleBind ld dn passwd =
     withLDAPPtr ld (\ptr ->
      withCString dn (\cdn ->
-      withCString passwd (\cpasswd -> 
+      withCString passwd (\cpasswd ->
         do checkLE "ldapSimpleBind" ld
                             (ldap_simple_bind_s ptr cdn cpasswd)
            return ()
@@ -115,6 +116,16 @@ ldapExternalSaslBind ld authz =
     withLDAPPtr ld (\ptr ->
      withCStringLen authz (\(authzPtr,authzLen) ->
         do checkLE "ldapExternalSaslBind" ld (external_sasl_bind ptr authzPtr authzLen)
+           return ()
+      ))
+
+{- | Bind with the SASL GSSAPI mechanism. -}
+ldapGSSAPISaslBind :: LDAP   -- ^ LDAP Object
+                     -> IO ()
+ldapGSSAPISaslBind ld =
+    withLDAPPtr ld (\ptr ->
+     withCStringLen "GSSAPI" (\(authzPtr,authzLen) ->
+        do checkLE "ldapGSSAPISaslBind" ld (gssapi_sasl_bind ptr authzPtr authzLen)
            return ()
       ))
 
@@ -133,6 +144,9 @@ foreign import ccall safe "ldap.h ldap_simple_bind_s"
 
 foreign import ccall safe "sasl_external.h external_sasl_bind"
   external_sasl_bind :: LDAPPtr -> CString -> Int -> IO LDAPInt
+
+foreign import ccall safe "sasl_gssapi.h gssapi_sasl_bind"
+  gssapi_sasl_bind :: LDAPPtr -> CString -> Int -> IO LDAPInt
 
 foreign import ccall unsafe "ldap.h ldap_set_option"
   ldap_set_option :: LDAPPtr -> LDAPInt -> Ptr () -> IO LDAPInt

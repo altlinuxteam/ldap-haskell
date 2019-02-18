@@ -22,7 +22,7 @@ Written by John Goerzen, jgoerzen\@complete.org
 
 module LDAP.Modify (-- * Basics
                     LDAPModOp(..), LDAPMod(..),
-                    ldapAdd, ldapModify, ldapDelete,
+                    ldapAdd, ldapModify, ldapDelete, ldapRename,
                     -- * Utilities
                     list2ldm, pairs2ldm
                    )
@@ -77,6 +77,16 @@ ldapDelete ld dn =
     do checkLE "ldapDelete" ld $ ldap_delete_s cld cdn
        return ()
                    ))
+{- | Rename DN to new DN -}
+ldapRename :: LDAP -> String -> String -> String -> IO ()
+ldapRename ld dn newRDN parentRDN =
+  withLDAPPtr ld (\cld ->
+  withCString dn (\cdn ->
+  withCString newRDN (\cnewrdn ->
+  withCString parentRDN(\prdn ->
+  do checkLE "ldapRename" ld $ ldap_rename_s cld cdn cnewrdn prdn 1 nullPtr nullPtr
+     return ()
+                 ))))
 
 {- | Takes a list of name\/value points and converts them to LDAPMod
 entries.  Each item will have the specified 'LDAPModOp'. -}
@@ -95,11 +105,11 @@ newCLDAPMod :: LDAPMod -> IO (Ptr CLDAPMod)
 newCLDAPMod lm =
     do (ptr::(Ptr CLDAPMod)) <- mallocBytes #{size LDAPMod}
        cmodtype <- newCString (modType lm)
-       let (cmodop::LDAPInt) = 
-               (fromIntegral . fromEnum . modOp $ lm) .|. 
+       let (cmodop::LDAPInt) =
+               (fromIntegral . fromEnum . modOp $ lm) .|.
                #{const LDAP_MOD_BVALUES}
        bervals <- mapM newBerval (modVals lm)
-       (arrptr::Ptr (Ptr Berval)) <- newArray0 nullPtr bervals 
+       (arrptr::Ptr (Ptr Berval)) <- newArray0 nullPtr bervals
        ( #{poke LDAPMod, mod_op} ) ptr cmodop
        ( #{poke LDAPMod, mod_type } ) ptr cmodtype
        ( #{poke LDAPMod, mod_vals } ) ptr arrptr
@@ -118,7 +128,7 @@ freeCLDAPMod ptr =
        -- mod_op is an int and doesn't need freeing
        -- free the LDAPMod itself.
        free ptr
-       
+
 withCLDAPModArr0 :: [LDAPMod] -> (Ptr (Ptr CLDAPMod) -> IO a) -> IO a
 withCLDAPModArr0 = withAnyArr0 newCLDAPMod freeCLDAPMod
 
@@ -130,3 +140,6 @@ foreign import ccall safe "ldap.h ldap_delete_s"
 
 foreign import ccall safe "ldap.h ldap_add_s"
   ldap_add_s :: LDAPPtr -> CString -> Ptr (Ptr CLDAPMod) -> IO LDAPInt
+
+foreign import ccall safe "ldap.h ldap_rename_s"
+  ldap_rename_s :: LDAPPtr -> CString -> CString -> CString -> CInt -> (Ptr a) -> (Ptr a) -> IO LDAPInt

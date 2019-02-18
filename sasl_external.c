@@ -2,6 +2,7 @@
 #include <sasl/sasl.h>
 
 #include "sasl_external.h"
+#include "sasl_gssapi.h"
 
 struct external_defaults {
   const char *authzPtr;
@@ -19,8 +20,8 @@ static int external_interact (LDAP *ld, unsigned flags, void *defaults, void *sa
     switch (interact->id) {
     case SASL_CB_USER:
       if (defs->authzLen) {
-        interact->result = defs->authzPtr;
-        interact->len = defs->authzLen;
+	interact->result = defs->authzPtr;
+	interact->len = defs->authzLen;
       }
       break;
     /* RFC 4422 (SASL) doesn't allow any other callbacks for EXTERNAL */
@@ -34,6 +35,15 @@ int external_sasl_bind (LDAP *ld, const char *authz, int len)
   struct external_defaults defaults = { authzPtr: authz, authzLen: len };
 
   return ldap_sasl_interactive_bind_s (ld, NULL, "EXTERNAL", NULL, NULL,
-                                       LDAP_SASL_QUIET,
-                                       external_interact, &defaults);
+				       LDAP_SASL_QUIET,
+				       external_interact, &defaults);
+}
+
+int gssapi_sasl_bind (LDAP *ld, const char *authz, int len)
+{
+  struct external_defaults defaults = { authzPtr: authz, authzLen: len };
+
+  return ldap_sasl_interactive_bind_s (ld, NULL, "GSSAPI", NULL, NULL,
+				       LDAP_SASL_QUIET,
+				       external_interact, &defaults);
 }
