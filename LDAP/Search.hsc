@@ -37,7 +37,6 @@ import Foreign.C.Types(CInt(..))
 #endif
 import LDAP.Result
 import Control.Exception(finally)
-
 #include <ldap.h>
 
 {- | Defines what attributes to return with the search result. -}
@@ -90,7 +89,7 @@ procSR ld cld msgid =
             then return []
             else do --putStrLn "Have first entry"
                     cdn <- ldap_get_dn cld felm -- FIXME: check null
-                    dn <- peekCString cdn
+                    dn <- peekCAString cdn
                     ldap_memfree cdn
                     attrs <- getattrs ld felm
                     next <- procSR ld cld msgid
@@ -109,7 +108,7 @@ getattrs ld lmptr =
               do cstr <- ldap_first_attribute cld lmptr ptr
                  if cstr == nullPtr
                     then return []
-                    else do str <- peekCString cstr
+                    else do str <- peekCAString cstr
                             ldap_memfree cstr
                             bptr <- peek ptr
                             values <- getvalues cld lmptr str
@@ -122,7 +121,7 @@ getnextitems cld lmptr bptr =
     do cstr <- ldap_next_attribute cld lmptr bptr
        if cstr == nullPtr
           then return []
-          else do str <- peekCString cstr
+          else do str <- peekCAString cstr
                   ldap_memfree cstr
                   values <- getvalues cld lmptr str
                   nextitems <- getnextitems cld lmptr bptr

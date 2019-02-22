@@ -68,7 +68,7 @@ checkLEe test callername ld action =
           then return result
           else do errornum <- ldapGetOptionIntNoEc ld LdapOptErrorNumber
                   let hserror = toEnum (fromIntegral errornum)
-                  err2string <- (ldap_err2string errornum >>= peekCString)
+                  err2string <- (ldap_err2string errornum >>= peekCAString)
                   objstring <- ldapGetOptionStrNoEc ld LdapOptErrorString
                   let desc = case objstring of
                                              Nothing -> err2string
@@ -80,7 +80,7 @@ checkLEe test callername ld action =
                   throwLDAP exc
 {-
 
-          else do s <- (ldap_err2string result >>= peekCString)
+          else do s <- (ldap_err2string result >>= peekCAString)
                   let exc = LDAPException {code = (toEnum (fromIntegral result)), 
                                            description = s,
                                            caller = callername}
@@ -137,7 +137,7 @@ ldapGetOptionStrNoEc ld oc =
                       withForeignPtr fp (\cs ->
                        do if cs == nullPtr
                              then return Nothing
-                             else do hstr <- peekCString cs
+                             else do hstr <- peekCAString cs
                                      return $ Just hstr
                                         )
 
@@ -168,7 +168,7 @@ bv2str :: Ptr Berval -> IO String
 bv2str bptr = 
     do (len::BERLen) <- ( #{peek struct berval, bv_len} ) bptr
        cstr <- ( #{peek struct berval, bv_val} ) bptr
-       peekCStringLen (cstr, fromIntegral len)
+       peekCAStringLen (cstr, fromIntegral len)
 
 {- | Must be freed later with freeHSBerval! -}
 
